@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ConfigFerry.App/ConfigFerry.App.csproj" />
+    <Project Path="src/ConfigFerry.Core/ConfigFerry.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ConfigFerry.Core.Tests/ConfigFerry.Core.Tests.csproj" />
+  </Folder>
+</Solution>
