@@ -1,7 +1,16 @@
 # ConfigFerry
 
+[![CI](https://github.com/hvetter-de/ConfigFerry/actions/workflows/ci.yml/badge.svg)](https://github.com/hvetter-de/ConfigFerry/actions/workflows/ci.yml)
+
 WinUI 3 desktop tool (.NET 10) that ferries the configuration of an Azure App Service / Function App down to your
 machine, as an `appsettings.json` or an Azure Functions `local.settings.json`.
+
+## Download
+
+Get the latest build from the [Releases page](https://github.com/hvetter-de/ConfigFerry/releases/latest): download the zip
+for your CPU (`win-x64` for most PCs, `win-arm64` for Windows on ARM), extract it and run `ConfigFerry.App.exe`.
+No installer and no .NET installation are needed. The build is not code-signed, so Windows SmartScreen may show a warning
+(*More info* → *Run anyway*). Verify downloads with `SHA256SUMS.txt`.
 
 ## Features
 
@@ -44,6 +53,19 @@ dotnet build ConfigFerry.slnx
 dotnet test  tests/ConfigFerry.Core.Tests
 dotnet run   --project src/ConfigFerry.App
 ```
+
+## Releasing
+
+CI (`.github/workflows/ci.yml`) builds and tests every push and pull request. To publish a release, push a version tag:
+
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The `Release` workflow then tests, publishes self-contained x64 and ARM64 builds and creates the GitHub Release with the
+zips and checksums. Alternatively run the workflow manually on `main` and enter the version (it creates the tag).
+Versions with a suffix (e.g. `1.1.0-beta.1`) are marked as pre-releases.
 
 ## Structure
 

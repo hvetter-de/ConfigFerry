@@ -1,0 +1,136 @@
+name: Release
+
+# Publishes a GitHub Release with self-contained Windows builds (x64, ARM64).
+#  - Push a tag such as v1.2.0 to release that commit, or
+#  - run the workflow manually on main and enter a version (the tag is created for you).
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without leading "v" (e.g. 1.2.0 or 1.2.0-beta.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Resolve version
+    # Manual runs are only allowed from main.
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - name: Resolve and validate version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$INPUT_VERSION"
+          fi
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$version' is not a valid semantic version (expected e.g. 1.2.0 or 1.2.0-beta.1)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+
+  test:
+    name: Build and test
+    needs: prepare
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore ConfigFerry.slnx
+      - run: dotnet build ConfigFerry.slnx -c Release --no-restore
+      - run: dotnet test tests/ConfigFerry.Core.Tests -c Release --no-build
+
+  publish:
+    name: Publish ${{ matrix.rid }}
+    needs: [prepare, test]
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        rid: [win-x64, win-arm64]
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish (self-contained, unpackaged)
+        run: >
+          dotnet publish src/ConfigFerry.App -c Release
+          -r ${{ matrix.rid }} --self-contained true
+          -p:Version=${{ env.VERSION }}
+          -o out/ConfigFerry
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path out/ConfigFerry -DestinationPath "dist/ConfigFerry-v$env:VERSION-${{ matrix.rid }}.zip" -CompressionLevel Optimal
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ConfigFerry-${{ matrix.rid }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Create GitHub Release
+    needs: [prepare, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: ConfigFerry-*
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum *.zip > SHA256SUMS.txt
+
+      - name: Create release
+        run: |
+          notes="## Install
+          1. Download the zip for your CPU: **win-x64** (most PCs) or **win-arm64** (Windows on ARM).
+          2. Extract it and run \`ConfigFerry.App.exe\`. No installer and no .NET installation needed.
+          3. Windows SmartScreen may warn because the build is not code-signed: choose *More info* > *Run anyway*.
+
+          Verify the download with \`SHA256SUMS.txt\`.
+          "
+          args=(--repo "$GITHUB_REPOSITORY" --title "ConfigFerry v$VERSION" --notes "$notes" --generate-notes --target "$GITHUB_SHA")
+          if [ "$PRERELEASE" = "true" ]; then args+=(--prerelease); fi
+          gh release create "v$VERSION" dist/*.zip dist/SHA256SUMS.txt "${args[@]}"
