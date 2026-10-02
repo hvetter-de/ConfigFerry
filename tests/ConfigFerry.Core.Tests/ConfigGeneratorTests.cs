@@ -117,8 +117,100 @@ public class ConfigGeneratorTests
         Assert.Equal("dotnet-isolated", (string?)values["FUNCTIONS_WORKER_RUNTIME"]);
         Assert.Equal("v", (string?)values["App__Setting"]);
         Assert.False(values.ContainsKey("WEBSITE_X"));
-        Assert.Equal("conn", (string?)json["ConnectionStrings"]!["Db"]);
+        Assert.Equal("conn", (string?)values["ConnectionStrings__Db"]);
+        Assert.False(json.ContainsKey("ConnectionStrings")); // no separate section by default
         Assert.All(values, p => Assert.IsAssignableFrom<JsonValue>(p.Value));
+    }
+
+    [Fact]
+    public void Functions_ConnectionStrings_GoToValues_WhenFileHasNoSection()
+    {
+        var result = _sut.Generate(
+            Azure(connections: new() { ["Orders"] = "c1" }),
+            new GenerationOptions(ConfigFormat.FunctionLocalSettings),
+            """{ "IsEncrypted": false, "Values": { "A": "1" }, "Host": { "CORS": "*" } }""");
+
+        var json = Parse(result.Json);
+        Assert.Equal("c1", (string?)json["Values"]!["ConnectionStrings__Orders"]);
+        Assert.False(json.ContainsKey("ConnectionStrings"));
+        Assert.Equal(new MergeStats(1, 0, 0), result.Stats);
+    }
+
+    [Fact]
+    public void Functions_ConnectionString_UpdatedInPlace_WhenExistingSectionManagesIt()
+    {
+        const string existing = """
+            {
+              "IsEncrypted": false,
+              "Values": { "connectionstrings:orders": "stale", "Other": "x" },
+              "ConnectionStrings": { "orders": "old", "LocalOnly": "keep" }
+            }
+            """;
+
+        var result = _sut.Generate(
+            Azure(connections: new() { ["Orders"] = "new", ["Fresh"] = "f" }),
+            new GenerationOptions(ConfigFormat.FunctionLocalSettings),
+            existing);
+
+        var json = Parse(result.Json);
+        var section = (JsonObject)json["ConnectionStrings"]!;
+        Assert.Equal("new", (string?)section["orders"]); // local casing kept
+        Assert.Equal("keep", (string?)section["LocalOnly"]);
+        Assert.Equal(2, section.Count);
+
+        var values = (JsonObject)json["Values"]!;
+        Assert.False(values.ContainsKey("connectionstrings:orders")); // conflicting duplicate removed
+        Assert.Equal("f", (string?)values["ConnectionStrings__Fresh"]); // unknown name goes to Values
+        Assert.Equal("x", (string?)values["Other"]);
+        Assert.Contains(result.Warnings, w => w.Contains("Orders", StringComparison.Ordinal) && w.Contains("duplicate", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Functions_ConnectionString_WinsOverAppSettingWithSameKey()
+    {
+        var result = _sut.Generate(
+            Azure(
+                new() { ["ConnectionStrings:Db"] = "from-setting", ["Other"] = "o" },
+                new() { ["Db"] = "from-connection-string" }),
+            new GenerationOptions(ConfigFormat.FunctionLocalSettings),
+            existingJson: null);
+
+        var values = (JsonObject)Parse(result.Json)["Values"]!;
+        Assert.Equal("from-connection-string", (string?)values["ConnectionStrings__Db"]);
+        Assert.Equal(2, values.Count(p => p.Key is "ConnectionStrings__Db" or "Other"));
+        Assert.Equal(2, values.Count);
+    }
+
+    [Fact]
+    public void Functions_ConnectionString_ReplacesExistingValuesEntry_Case_And_Separator_Insensitive()
+    {
+        var result = _sut.Generate(
+            Azure(connections: new() { ["Db"] = "new" }),
+            new GenerationOptions(ConfigFormat.FunctionLocalSettings),
+            """{ "IsEncrypted": false, "Values": { "ConnectionStrings:DB": "old" } }""");
+
+        var values = (JsonObject)Parse(result.Json)["Values"]!;
+        Assert.Single(values);
+        Assert.Equal("new", (string?)values["ConnectionStrings__Db"]);
+        Assert.Equal(new MergeStats(0, 1, 0), result.Stats);
+    }
+
+    [Fact]
+    public void Functions_ConnectionsSectionNotAnObject_Throws() =>
+        Assert.Throws<ConfigFerryException>(() => _sut.Generate(
+            Azure(connections: new() { ["Db"] = "x" }),
+            new GenerationOptions(ConfigFormat.FunctionLocalSettings),
+            """{ "ConnectionStrings": 5 }"""));
+
+    [Fact]
+    public void Functions_CanSkipConnectionStrings()
+    {
+        var result = _sut.Generate(
+            Azure(new() { ["A"] = "1" }, new() { ["Db"] = "x" }),
+            new GenerationOptions(ConfigFormat.FunctionLocalSettings, IncludeConnectionStrings: false),
+            null);
+
+        Assert.DoesNotContain("ConnectionStrings", result.Json);
     }
 
     [Fact]

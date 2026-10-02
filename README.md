@@ -30,6 +30,11 @@ No installer and no .NET installation are needed. The build is not code-signed, 
   signed-in user's token. Unreadable secrets stay as the reference and are reported as warnings.
 - Azure setting keys (`A:B`, `A__B`, `A__0`) become nested objects/arrays for appsettings and `A__B` for functions.
 - Platform settings (`WEBSITE_*`, `SCM_*`, …) are excluded by default.
+- **Connection strings:** for `appsettings.json` they go into the `ConnectionStrings` section. For `local.settings.json`
+  they are written to `Values` as `ConnectionStrings__Name` (a plain environment variable that maps to
+  `ConnectionStrings:Name` on every OS, so `GetConnectionString("Name")` works). If your existing file already keeps that
+  name in its `ConnectionStrings` section, it is updated there instead, and a duplicate in `Values` is removed so every
+  connection string is defined in exactly one place. A same-named app setting loses against the connection string.
 
 ### Merge semantics
 
