@@ -427,6 +427,63 @@ public sealed class MainViewModelTests : IDisposable
         }
     }
 
+    [Theory]
+    [InlineData("jane.doe@contoso.com", "JA")]
+    [InlineData("x@y.z", "X")]
+    [InlineData("42@y.z", "?")]
+    [InlineData(null, "?")]
+    public void AccountInitials_AreDerivedFromUserName(string? account, string expected)
+    {
+        _sut.AccountName = account;
+
+        Assert.Equal(expected, _sut.AccountInitials);
+    }
+
+    [Fact]
+    public async Task PreviewTitle_FollowsFormatAndFile()
+    {
+        Assert.Equal("appsettings.json", _sut.PreviewTitle);
+
+        _sut.IsFunctionsFormat = true;
+        Assert.Equal("local.settings.json", _sut.PreviewTitle);
+
+        _sut.IsFileTarget = true;
+        _sut.SelectedFilePath = @"C:\p\appsettings.Development.json";
+        Assert.Equal("appsettings.Development.json", _sut.PreviewTitle);
+
+        await Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task Generate_PublishesCountsAndPreviewFlags()
+    {
+        await SignInAndSelectAsync(Web);
+        Assert.True(_sut.IsPreviewEmpty);
+
+        await _sut.GenerateCommand.ExecuteAsync(null);
+
+        Assert.True(_sut.HasPreviewText);
+        Assert.False(_sut.IsPreviewEmpty);
+        Assert.Equal((2, 1, 0), (_sut.AddedCount, _sut.OverriddenCount, _sut.UnchangedCount));
+
+        _sut.IsFunctionsFormat = true; // invalidates the result
+
+        Assert.True(_sut.IsPreviewEmpty);
+        Assert.Equal((0, 0, 0), (_sut.AddedCount, _sut.OverriddenCount, _sut.UnchangedCount));
+    }
+
+    [Fact]
+    public async Task Generate_WithWarnings_MentionsThemInStatus()
+    {
+        _resolver.ResolveAsync(Arg.Any<AzureAppConfiguration>(), Arg.Any<CancellationToken>())
+            .Returns(call => new KeyVaultResolutionResult(call.Arg<AzureAppConfiguration>(), 0, ["w1", "w2"]));
+        await SignInAndSelectAsync(Web);
+
+        await _sut.GenerateCommand.ExecuteAsync(null);
+
+        Assert.Contains("2 warning(s)", _sut.StatusMessage);
+    }
+
     [Fact]
     public void JsonTarget_IsInverseOfFileTarget()
     {

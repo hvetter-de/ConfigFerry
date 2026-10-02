@@ -5,6 +5,11 @@
 WinUI 3 desktop tool (.NET 10) that ferries the configuration of an Azure App Service / Function App down to your
 machine, as an `appsettings.json` or an Azure Functions `local.settings.json`.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
+  <img alt="ConfigFerry merging Azure settings into an existing appsettings file" src="docs/screenshot-light.png">
+</picture>
+
 ## Download
 
 Get the latest build from the [Releases page](https://github.com/hvetter-de/ConfigFerry/releases/latest): download the zip

@@ -5,44 +5,68 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:ConfigFerry.App.Views">
 
-    <Grid Padding="24,8,24,24" RowSpacing="12">
+    <Grid Padding="28,4,28,24" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Account -->
-        <Grid ColumnSpacing="12">
+        <!-- ============ Header ============ -->
+        <Grid ColumnSpacing="14" Visibility="{x:Bind ViewModel.IsSignedIn, Mode=OneWay}">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="ConfigFerry" />
-            <TextBlock
-                Grid.Column="1"
-                VerticalAlignment="Center"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Text="{x:Bind ViewModel.AccountName, Mode=OneWay}"
-                Visibility="{x:Bind ViewModel.IsSignedIn, Mode=OneWay}" />
-            <Button
+
+            <Image
+                Width="48"
+                Height="48"
+                AutomationProperties.AccessibilityView="Raw"
+                Source="ms-appx:///Assets/Logo.png" />
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock
+                    FontSize="26"
+                    FontWeight="SemiBold"
+                    Text="ConfigFerry" />
+                <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="Bring your Azure app configuration to your local machine." />
+            </StackPanel>
+
+            <StackPanel
                 Grid.Column="2"
-                AutomationProperties.Name="Sign in with Microsoft Entra ID"
-                Command="{x:Bind ViewModel.SignInCommand}"
-                Content="Sign in with Microsoft"
-                Style="{StaticResource AccentButtonStyle}"
-                Visibility="{x:Bind ViewModel.IsSignedOut, Mode=OneWay}" />
-            <Button
-                Grid.Column="3"
-                Command="{x:Bind ViewModel.SignOutCommand}"
-                Content="Sign out"
-                Visibility="{x:Bind ViewModel.IsSignedIn, Mode=OneWay}" />
+                VerticalAlignment="Center"
+                Orientation="Horizontal"
+                Spacing="8"
+                Visibility="{x:Bind ViewModel.IsSignedIn, Mode=OneWay}">
+                <Border
+                    Padding="5,5,14,5"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="22">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <PersonPicture
+                            Width="32"
+                            Height="32"
+                            Initials="{x:Bind ViewModel.AccountInitials, Mode=OneWay}" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            Text="{x:Bind ViewModel.AccountName, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+                <Button Command="{x:Bind ViewModel.SignOutCommand}" ToolTipService.ToolTip="Sign out">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE7E8;" />
+                        <TextBlock Text="Sign out" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </Grid>
 
-        <!-- Status -->
-        <StackPanel Grid.Row="1" Spacing="4">
+        <!-- ============ Status ============ -->
+        <StackPanel Grid.Row="1" Spacing="6">
             <ProgressBar IsIndeterminate="True" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
             <InfoBar
                 IsClosable="False"
@@ -51,184 +75,518 @@
                 Severity="{x:Bind local:MainView.MapSeverity(ViewModel.StatusSeverity), Mode=OneWay}" />
         </StackPanel>
 
-        <Grid Grid.Row="2" ColumnSpacing="24">
+        <!-- ============ Welcome (signed out) ============ -->
+        <Grid Grid.Row="2" Visibility="{x:Bind ViewModel.IsSignedOut, Mode=OneWay}">
+            <Border
+                MaxWidth="560"
+                Padding="40,36"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="22">
+                    <StackPanel HorizontalAlignment="Center" Spacing="12">
+                        <Image
+                            Width="104"
+                            Height="104"
+                            AutomationProperties.AccessibilityView="Raw"
+                            Source="ms-appx:///Assets/Logo.png" />
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="24"
+                            FontWeight="SemiBold"
+                            Text="Welcome to ConfigFerry" />
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            Style="{StaticResource SecondaryTextStyle}"
+                            Text="Sign in to pull settings from App Services and Function Apps."
+                            TextAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="12">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource IconTileStyle}">
+                                <FontIcon FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE753;" />
+                            </Border>
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Browse tenants, subscriptions and apps" />
+                        </Grid>
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource IconTileStyle}">
+                                <FontIcon FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE72E;" />
+                            </Border>
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Key Vault references are resolved for you" />
+                        </Grid>
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Style="{StaticResource IconTileStyle}">
+                                <FontIcon FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8A5;" />
+                            </Border>
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Generate or merge appsettings.json and local.settings.json" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <Button
+                            Height="44"
+                            HorizontalAlignment="Stretch"
+                            Command="{x:Bind ViewModel.SignInCommand}"
+                            Style="{StaticResource AccentButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <FontIcon FontSize="16" Glyph="&#xE77B;" />
+                                <TextBlock Text="Sign in with Microsoft" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock
+                            HorizontalAlignment="Center"
+                            FontSize="12"
+                            Style="{StaticResource SecondaryTextStyle}"
+                            Text="Uses your Microsoft Entra ID account. Only a protected token is stored locally."
+                            TextAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ============ Workspace (signed in) ============ -->
+        <Grid
+            Grid.Row="2"
+            ColumnSpacing="16"
+            Visibility="{x:Bind ViewModel.IsSignedIn, Mode=OneWay}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="420" />
+                <ColumnDefinition Width="440" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Settings -->
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel Padding="0,0,12,0" Spacing="20">
-
-                    <StackPanel Spacing="8">
-                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="1 · Source: Azure" />
-                        <ComboBox
-                            HorizontalAlignment="Stretch"
-                            DisplayMemberPath="DisplayName"
-                            Header="Tenant (directory)"
-                            IsEnabled="{x:Bind ViewModel.CanChangeSource, Mode=OneWay}"
-                            ItemsSource="{x:Bind ViewModel.Tenants}"
-                            PlaceholderText="Select a tenant"
-                            SelectedItem="{x:Bind ViewModel.SelectedTenant, Mode=TwoWay}" />
-                        <ComboBox
-                            HorizontalAlignment="Stretch"
-                            DisplayMemberPath="DisplayName"
-                            Header="Subscription"
-                            IsEnabled="{x:Bind ViewModel.CanChangeSource, Mode=OneWay}"
-                            ItemsSource="{x:Bind ViewModel.Subscriptions}"
-                            PlaceholderText="Select a subscription"
-                            SelectedItem="{x:Bind ViewModel.SelectedSubscription, Mode=TwoWay}" />
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ComboBox
-                                HorizontalAlignment="Stretch"
-                                DisplayMemberPath="DisplayName"
-                                Header="App Service / Function App"
-                                IsEnabled="{x:Bind ViewModel.CanChangeSource, Mode=OneWay}"
-                                ItemsSource="{x:Bind ViewModel.AppServices}"
-                                PlaceholderText="Select an app"
-                                SelectedItem="{x:Bind ViewModel.SelectedAppService, Mode=TwoWay}" />
-                            <ProgressRing
-                                Grid.Column="1"
-                                Width="20"
-                                Height="20"
-                                VerticalAlignment="Bottom"
-                                IsActive="{x:Bind ViewModel.IsLoadingAppServices, Mode=OneWay}" />
-                        </Grid>
-                        <Button
-                            AutomationProperties.Name="Reload subscriptions"
-                            Command="{x:Bind ViewModel.RefreshCommand}"
-                            Content="Reload" />
-                    </StackPanel>
-
-                    <StackPanel Spacing="8">
-                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="2 · Target" />
-                        <RadioButton
-                            Content="Generate JSON (copy to clipboard)"
-                            GroupName="Target"
-                            IsChecked="{x:Bind ViewModel.IsJsonTarget, Mode=TwoWay}" />
-                        <RadioButton
-                            Content="Merge into an existing file"
-                            GroupName="Target"
-                            IsChecked="{x:Bind ViewModel.IsFileTarget, Mode=TwoWay}" />
-                        <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.IsFileTarget, Mode=OneWay}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox
-                                AutomationProperties.Name="Selected settings file"
-                                IsReadOnly="True"
-                                PlaceholderText="No file selected"
-                                Text="{x:Bind ViewModel.SelectedFilePath, Mode=OneWay}" />
-                            <Button
-                                Grid.Column="1"
-                                Command="{x:Bind ViewModel.BrowseFileCommand}"
-                                Content="Browse…" />
-                        </Grid>
-                    </StackPanel>
-
-                    <StackPanel Spacing="8">
-                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="3 · Format" />
-                        <RadioButton
-                            Content="appsettings.json (ASP.NET / .NET app)"
-                            GroupName="Format"
-                            IsChecked="{x:Bind ViewModel.IsAppSettingsFormat, Mode=TwoWay}" />
-                        <RadioButton
-                            Content="local.settings.json (Azure Function)"
-                            GroupName="Format"
-                            IsChecked="{x:Bind ViewModel.IsFunctionsFormat, Mode=TwoWay}" />
-                    </StackPanel>
-
-                    <StackPanel Spacing="4">
-                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Options" />
-                        <CheckBox
-                            Content="Resolve Key Vault references"
-                            IsChecked="{x:Bind ViewModel.ResolveKeyVaultReferences, Mode=TwoWay}" />
-                        <CheckBox
-                            Content="Exclude Azure platform settings (WEBSITE_*, …)"
-                            IsChecked="{x:Bind ViewModel.ExcludePlatformSettings, Mode=TwoWay}" />
-                        <CheckBox
-                            Content="Include connection strings"
-                            IsChecked="{x:Bind ViewModel.IncludeConnectionStrings, Mode=TwoWay}" />
-                        <CheckBox
-                            Content="Create .bak backup before saving"
-                            IsChecked="{x:Bind ViewModel.CreateBackup, Mode=TwoWay}"
-                            Visibility="{x:Bind ViewModel.IsFileTarget, Mode=OneWay}" />
-                    </StackPanel>
-
-                    <Button
-                        HorizontalAlignment="Stretch"
-                        Command="{x:Bind ViewModel.GenerateCommand}"
-                        Content="Generate"
-                        Style="{StaticResource AccentButtonStyle}" />
-                </StackPanel>
-            </ScrollViewer>
-
-            <!-- Result -->
-            <Grid Grid.Column="1" RowSpacing="8">
+            <!-- Left: configuration -->
+            <Grid RowSpacing="12">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Grid ColumnSpacing="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Preview" />
-                        <TextBlock
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Text="{x:Bind ViewModel.Summary, Mode=OneWay}" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Padding="0,0,10,0" Spacing="12">
+
+                        <!-- 1 · Source -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource StepBadgeStyle}">
+                                        <TextBlock Style="{StaticResource StepBadgeTextStyle}" Text="1" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Source" />
+                                        <TextBlock FontSize="12" Style="{StaticResource SecondaryTextStyle}" Text="Which app should the settings come from?" />
+                                    </StackPanel>
+                                    <Button
+                                        Grid.Column="2"
+                                        Padding="8"
+                                        AutomationProperties.Name="Reload tenants and subscriptions"
+                                        Command="{x:Bind ViewModel.RefreshCommand}"
+                                        ToolTipService.ToolTip="Reload">
+                                        <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                    </Button>
+                                </Grid>
+
+                                <ComboBox
+                                    HorizontalAlignment="Stretch"
+                                    DisplayMemberPath="DisplayName"
+                                    Header="Tenant (directory)"
+                                    IsEnabled="{x:Bind ViewModel.CanChangeSource, Mode=OneWay}"
+                                    ItemsSource="{x:Bind ViewModel.Tenants}"
+                                    PlaceholderText="Select a tenant"
+                                    SelectedItem="{x:Bind ViewModel.SelectedTenant, Mode=TwoWay}" />
+                                <ComboBox
+                                    HorizontalAlignment="Stretch"
+                                    DisplayMemberPath="DisplayName"
+                                    Header="Subscription"
+                                    IsEnabled="{x:Bind ViewModel.CanChangeSource, Mode=OneWay}"
+                                    ItemsSource="{x:Bind ViewModel.Subscriptions}"
+                                    PlaceholderText="Select a subscription"
+                                    SelectedItem="{x:Bind ViewModel.SelectedSubscription, Mode=TwoWay}" />
+                                <Grid>
+                                    <ComboBox
+                                        HorizontalAlignment="Stretch"
+                                        DisplayMemberPath="DisplayName"
+                                        Header="App Service / Function App"
+                                        IsEnabled="{x:Bind ViewModel.CanChangeSource, Mode=OneWay}"
+                                        ItemsSource="{x:Bind ViewModel.AppServices}"
+                                        PlaceholderText="Select an app"
+                                        SelectedItem="{x:Bind ViewModel.SelectedAppService, Mode=TwoWay}" />
+                                    <ProgressRing
+                                        Width="18"
+                                        Height="18"
+                                        Margin="0,0,40,7"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Bottom"
+                                        IsActive="{x:Bind ViewModel.IsLoadingAppServices, Mode=OneWay}" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 2 · Target -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource StepBadgeStyle}">
+                                        <TextBlock Style="{StaticResource StepBadgeTextStyle}" Text="2" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Target" />
+                                        <TextBlock FontSize="12" Style="{StaticResource SecondaryTextStyle}" Text="Where should the result go?" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <RadioButton
+                                    GroupName="Target"
+                                    IsChecked="{x:Bind ViewModel.IsJsonTarget, Mode=TwoWay}"
+                                    Style="{StaticResource OptionCardStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTileStyle}">
+                                            <FontIcon FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8C8;" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock FontWeight="SemiBold" Text="Generate JSON" />
+                                            <TextBlock FontSize="12" Style="{StaticResource SecondaryTextStyle}" Text="Preview it and copy it to the clipboard" />
+                                        </StackPanel>
+                                    </Grid>
+                                </RadioButton>
+
+                                <RadioButton
+                                    GroupName="Target"
+                                    IsChecked="{x:Bind ViewModel.IsFileTarget, Mode=TwoWay}"
+                                    Style="{StaticResource OptionCardStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTileStyle}">
+                                            <FontIcon FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE838;" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock FontWeight="SemiBold" Text="Merge into an existing file" />
+                                            <TextBlock FontSize="12" Style="{StaticResource SecondaryTextStyle}" Text="Update a file on disk. Azure values win." />
+                                        </StackPanel>
+                                    </Grid>
+                                </RadioButton>
+
+                                <Grid ColumnSpacing="8" Visibility="{x:Bind ViewModel.IsFileTarget, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox
+                                        AutomationProperties.Name="Selected settings file"
+                                        IsReadOnly="True"
+                                        PlaceholderText="No file selected"
+                                        Text="{x:Bind ViewModel.SelectedFilePath, Mode=OneWay}"
+                                        ToolTipService.ToolTip="{x:Bind ViewModel.SelectedFilePath, Mode=OneWay}" />
+                                    <Button Grid.Column="1" Command="{x:Bind ViewModel.BrowseFileCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <FontIcon FontSize="14" Glyph="&#xE838;" />
+                                            <TextBlock Text="Browse…" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 3 · Format -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource StepBadgeStyle}">
+                                        <TextBlock Style="{StaticResource StepBadgeTextStyle}" Text="3" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Format" />
+                                        <TextBlock FontSize="12" Style="{StaticResource SecondaryTextStyle}" Text="Which kind of project is this for?" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <RadioButton
+                                    GroupName="Format"
+                                    IsChecked="{x:Bind ViewModel.IsAppSettingsFormat, Mode=TwoWay}"
+                                    Style="{StaticResource OptionCardStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTileStyle}">
+                                            <FontIcon FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE774;" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock FontWeight="SemiBold" Text="appsettings.json" />
+                                            <TextBlock FontSize="12" Style="{StaticResource SecondaryTextStyle}" Text="ASP.NET, worker services and other .NET apps" />
+                                        </StackPanel>
+                                    </Grid>
+                                </RadioButton>
+
+                                <RadioButton
+                                    GroupName="Format"
+                                    IsChecked="{x:Bind ViewModel.IsFunctionsFormat, Mode=TwoWay}"
+                                    Style="{StaticResource OptionCardStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource IconTileStyle}">
+                                            <FontIcon FontSize="16" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE945;" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock FontWeight="SemiBold" Text="local.settings.json" />
+                                            <TextBlock FontSize="12" Style="{StaticResource SecondaryTextStyle}" Text="Azure Functions local development" />
+                                        </StackPanel>
+                                    </Grid>
+                                </RadioButton>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Options -->
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    Margin="0,0,0,4"
+                                    Style="{StaticResource CardTitleStyle}"
+                                    Text="Options" />
+                                <CheckBox
+                                    Content="Resolve Key Vault references"
+                                    IsChecked="{x:Bind ViewModel.ResolveKeyVaultReferences, Mode=TwoWay}" />
+                                <CheckBox
+                                    Content="Exclude Azure platform settings (WEBSITE_*, …)"
+                                    IsChecked="{x:Bind ViewModel.ExcludePlatformSettings, Mode=TwoWay}" />
+                                <CheckBox
+                                    Content="Include connection strings"
+                                    IsChecked="{x:Bind ViewModel.IncludeConnectionStrings, Mode=TwoWay}" />
+                                <CheckBox
+                                    Content="Create .bak backup before saving"
+                                    IsChecked="{x:Bind ViewModel.CreateBackup, Mode=TwoWay}"
+                                    Visibility="{x:Bind ViewModel.IsFileTarget, Mode=OneWay}" />
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
-                    <Button
-                        Grid.Column="1"
-                        VerticalAlignment="Top"
-                        Command="{x:Bind ViewModel.CopyToClipboardCommand}"
-                        Content="Copy" />
-                    <Button
-                        Grid.Column="2"
-                        VerticalAlignment="Top"
-                        Command="{x:Bind ViewModel.SaveToFileCommand}"
-                        Content="Save to file"
-                        Visibility="{x:Bind ViewModel.IsFileTarget, Mode=OneWay}" />
-                </Grid>
+                </ScrollViewer>
 
-                <TextBox
+                <Button
                     Grid.Row="1"
-                    AcceptsReturn="True"
-                    AutomationProperties.Name="Generated configuration preview"
-                    FontFamily="Consolas"
-                    IsReadOnly="True"
-                    PlaceholderText="The generated JSON appears here."
-                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                    ScrollViewer.VerticalScrollBarVisibility="Auto"
-                    Text="{x:Bind ViewModel.Preview, Mode=OneWay}"
-                    TextWrapping="NoWrap" />
-
-                <ItemsControl
-                    Grid.Row="2"
-                    ItemsSource="{x:Bind ViewModel.Warnings}"
-                    Visibility="{x:Bind ViewModel.HasWarnings, Mode=OneWay}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <TextBlock
-                                Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                                Text="{x:Bind}"
-                                TextWrapping="Wrap" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    Height="46"
+                    Margin="0,0,10,0"
+                    HorizontalAlignment="Stretch"
+                    Command="{x:Bind ViewModel.GenerateCommand}"
+                    Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <FontIcon FontSize="16" Glyph="&#xE768;" />
+                        <TextBlock FontWeight="SemiBold" Text="Generate" />
+                    </StackPanel>
+                </Button>
             </Grid>
+
+            <!-- Right: result -->
+            <Border Grid.Column="1" Padding="0" Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Toolbar -->
+                    <Grid Padding="18,14,14,14" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal"
+                            Spacing="10">
+                            <FontIcon
+                                FontSize="18"
+                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                Glyph="&#xE8A5;" />
+                            <TextBlock Style="{StaticResource CardTitleStyle}" Text="{x:Bind ViewModel.PreviewTitle, Mode=OneWay}" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Command="{x:Bind ViewModel.CopyToClipboardCommand}"
+                            ToolTipService.ToolTip="Copy to clipboard">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon FontSize="14" Glyph="&#xE8C8;" />
+                                <TextBlock Text="Copy" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            Grid.Column="2"
+                            Command="{x:Bind ViewModel.SaveToFileCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Visibility="{x:Bind ViewModel.IsFileTarget, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon FontSize="14" Glyph="&#xE74E;" />
+                                <TextBlock Text="Save to file" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- Result chips -->
+                    <StackPanel
+                        Grid.Row="1"
+                        Padding="18,0,18,14"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        Visibility="{x:Bind ViewModel.HasPreviewText, Mode=OneWay}">
+                        <Border Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}" Style="{StaticResource ChipStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon
+                                    FontSize="11"
+                                    Foreground="{ThemeResource SystemFillColorSuccessBrush}"
+                                    Glyph="&#xE710;" />
+                                <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.AddedCount, Mode=OneWay}" />
+                                <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="added" />
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}" Style="{StaticResource ChipStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon
+                                    FontSize="11"
+                                    Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                    Glyph="&#xE70F;" />
+                                <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.OverriddenCount, Mode=OneWay}" />
+                                <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="overridden by Azure" />
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{ThemeResource SubtleFillColorSecondaryBrush}" Style="{StaticResource ChipStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Glyph="&#xE73E;" />
+                                <TextBlock FontWeight="SemiBold" Text="{x:Bind ViewModel.UnchangedCount, Mode=OneWay}" />
+                                <TextBlock Style="{StaticResource SecondaryTextStyle}" Text="unchanged" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Preview body -->
+                    <Border
+                        Grid.Row="2"
+                        Margin="0"
+                        Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        BorderThickness="0,1,0,0"
+                        CornerRadius="0">
+                        <Grid>
+                            <ScrollViewer
+                                HorizontalScrollBarVisibility="Auto"
+                                VerticalScrollBarVisibility="Auto"
+                                Visibility="{x:Bind ViewModel.HasPreviewText, Mode=OneWay}">
+                                <TextBlock
+                                    Padding="18,14"
+                                    AutomationProperties.Name="Generated configuration preview"
+                                    FontFamily="Cascadia Mono, Consolas"
+                                    FontSize="13"
+                                    IsTextSelectionEnabled="True"
+                                    Text="{x:Bind ViewModel.Preview, Mode=OneWay}" />
+                            </ScrollViewer>
+
+                            <StackPanel
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="10"
+                                Visibility="{x:Bind ViewModel.IsPreviewEmpty, Mode=OneWay}">
+                                <Border
+                                    Width="72"
+                                    Height="72"
+                                    HorizontalAlignment="Center"
+                                    Background="{ThemeResource AccentTintBrush}"
+                                    CornerRadius="36">
+                                    <FontIcon
+                                        FontSize="30"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        Glyph="&#xE8A5;" />
+                                </Border>
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="18"
+                                    FontWeight="SemiBold"
+                                    Text="Nothing generated yet" />
+                                <TextBlock
+                                    MaxWidth="320"
+                                    HorizontalAlignment="Center"
+                                    Style="{StaticResource SecondaryTextStyle}"
+                                    Text="Choose a source and press Generate. The result appears here before anything is copied or saved."
+                                    TextAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Warnings -->
+                    <ScrollViewer
+                        Grid.Row="3"
+                        MaxHeight="150"
+                        VerticalScrollBarVisibility="Auto"
+                        Visibility="{x:Bind ViewModel.HasWarnings, Mode=OneWay}">
+                        <ItemsControl Margin="14,12,14,6" ItemsSource="{x:Bind ViewModel.Warnings}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Border
+                                        Margin="0,0,0,6"
+                                        Padding="10,8"
+                                        Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                        CornerRadius="6">
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon
+                                                VerticalAlignment="Top"
+                                                FontSize="14"
+                                                Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                                Glyph="&#xE7BA;" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                Text="{x:Bind}"
+                                                TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>
-

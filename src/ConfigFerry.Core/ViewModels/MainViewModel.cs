@@ -58,6 +58,7 @@ public sealed partial class MainViewModel(
     public bool IsSignedOut => !IsSignedIn;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AccountInitials))]
     public partial string? AccountName { get; set; }
 
     // ---- Source ----
@@ -78,7 +79,7 @@ public sealed partial class MainViewModel(
     // ---- Target ----
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsJsonTarget))]
+    [NotifyPropertyChangedFor(nameof(IsJsonTarget), nameof(PreviewTitle))]
     [NotifyCanExecuteChangedFor(nameof(GenerateCommand), nameof(SaveToFileCommand))]
     public partial bool IsFileTarget { get; set; }
 
@@ -89,12 +90,13 @@ public sealed partial class MainViewModel(
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PreviewTitle))]
     [NotifyCanExecuteChangedFor(nameof(GenerateCommand))]
     public partial string? SelectedFilePath { get; set; }
 
     /// <summary>False: appsettings.json (ASP.NET). True: local.settings.json (Azure Functions).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsAppSettingsFormat))]
+    [NotifyPropertyChangedFor(nameof(IsAppSettingsFormat), nameof(PreviewTitle))]
     public partial bool IsFunctionsFormat { get; set; }
 
     public bool IsAppSettingsFormat
@@ -120,11 +122,42 @@ public sealed partial class MainViewModel(
     // ---- Result ----
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPreviewText), nameof(IsPreviewEmpty))]
     [NotifyCanExecuteChangedFor(nameof(CopyToClipboardCommand), nameof(SaveToFileCommand))]
     public partial string Preview { get; set; } = string.Empty;
 
+    public bool HasPreviewText => !string.IsNullOrEmpty(Preview);
+
+    public bool IsPreviewEmpty => !HasPreviewText;
+
+    /// <summary>Name of the file the preview represents, shown above the preview.</summary>
+    public string PreviewTitle =>
+        IsFileTarget && !string.IsNullOrWhiteSpace(SelectedFilePath) ? Path.GetFileName(SelectedFilePath)
+        : IsFunctionsFormat ? FunctionsFileName
+        : "appsettings.json";
+
+    [ObservableProperty]
+    public partial int AddedCount { get; set; }
+
+    [ObservableProperty]
+    public partial int OverriddenCount { get; set; }
+
+    [ObservableProperty]
+    public partial int UnchangedCount { get; set; }
+
     [ObservableProperty]
     public partial string? Summary { get; set; }
+
+    /// <summary>Two letters for the account avatar, derived from the user name (e.g. "hv" for hvetter@…).</summary>
+    public string AccountInitials
+    {
+        get
+        {
+            var name = AccountName?.Split('@')[0] ?? string.Empty;
+            var letters = new string([.. name.Where(char.IsLetter).Take(2)]);
+            return letters.Length == 0 ? "?" : letters.ToUpperInvariant();
+        }
+    }
 
     [ObservableProperty]
     public partial string? StatusMessage { get; set; }
@@ -279,10 +312,14 @@ public sealed partial class MainViewModel(
             }
 
             OnPropertyChanged(nameof(HasWarnings));
+            AddedCount = result.Stats.Added;
+            OverriddenCount = result.Stats.Overridden;
+            UnchangedCount = result.Stats.Unchanged;
             Summary = $"{result.Stats.Added} added · {result.Stats.Overridden} overridden by Azure · {result.Stats.Unchanged} unchanged";
             SetStatus(
                 warnings.Count > 0 ? StatusSeverity.Warning : StatusSeverity.Success,
-                IsFileTarget ? "Merged preview ready. Review it, then save to the file." : "Configuration generated.");
+                (IsFileTarget ? "Merged preview ready. Review it, then save to the file." : "Configuration generated.")
+                + (warnings.Count > 0 ? $" {warnings.Count} warning(s), see below the preview." : string.Empty));
         });
     }
 
@@ -535,6 +572,7 @@ public sealed partial class MainViewModel(
     {
         Preview = string.Empty;
         Summary = null;
+        AddedCount = OverriddenCount = UnchangedCount = 0;
         _baselineFileContent = null;
         Warnings.Clear();
         OnPropertyChanged(nameof(HasWarnings));
