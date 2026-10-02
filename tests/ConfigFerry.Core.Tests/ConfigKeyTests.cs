@@ -2,28 +2,29 @@ using ConfigFerry.Core.Configuration;
 
 namespace ConfigFerry.Core.Tests;
 
+[TestClass]
 public class ConfigKeyTests
 {
-    [Theory]
-    [InlineData("A:B:C", "A__B__C")]
-    [InlineData("A__B", "A__B")]
-    [InlineData("A:B__C", "A__B__C")]
-    [InlineData("Plain", "Plain")]
+    [TestMethod]
+    [DataRow("A:B:C", "A__B__C")]
+    [DataRow("A__B", "A__B")]
+    [DataRow("A:B__C", "A__B__C")]
+    [DataRow("Plain", "Plain")]
     public void Normalize_UsesDoubleUnderscore(string input, string expected) =>
-        Assert.Equal(expected, ConfigKey.Normalize(input));
+        Assert.AreEqual(expected, ConfigKey.Normalize(input));
 
-    [Fact]
+    [TestMethod]
     public void Split_IgnoresEmptySegments() =>
-        Assert.Equal(["A", "B"], ConfigKey.Split("A::B"));
+        Assert.AreSequenceEqual(["A", "B"], ConfigKey.Split("A::B"));
 
-    [Theory]
-    [InlineData("WEBSITE_RUN_FROM_PACKAGE", true)]
-    [InlineData("website_node_default_version", true)]
-    [InlineData("FUNCTIONS_EXTENSION_VERSION", true)]
-    [InlineData("SCM_DO_BUILD_DURING_DEPLOYMENT", true)]
-    [InlineData("FUNCTIONS_WORKER_RUNTIME", false)]
-    [InlineData("AzureWebJobsStorage", false)]
-    [InlineData("MyApp:Setting", false)]
+    [TestMethod]
+    [DataRow("WEBSITE_RUN_FROM_PACKAGE", true)]
+    [DataRow("website_node_default_version", true)]
+    [DataRow("FUNCTIONS_EXTENSION_VERSION", true)]
+    [DataRow("SCM_DO_BUILD_DURING_DEPLOYMENT", true)]
+    [DataRow("FUNCTIONS_WORKER_RUNTIME", false)]
+    [DataRow("AzureWebJobsStorage", false)]
+    [DataRow("MyApp:Setting", false)]
     public void PlatformSettings_Detected(string key, bool expected) =>
-        Assert.Equal(expected, PlatformSettings.IsPlatformSetting(key));
+        Assert.AreEqual(expected, PlatformSettings.IsPlatformSetting(key));
 }

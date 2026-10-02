@@ -7,6 +7,7 @@ using NSubstitute.ExceptionExtensions;
 
 namespace ConfigFerry.Core.Tests;
 
+[TestClass]
 public sealed class MainViewModelTests : IDisposable
 {
     private const string FilePath = @"C:\x\appsettings.json";
@@ -73,50 +74,50 @@ public sealed class MainViewModelTests : IDisposable
         _sut.SelectedFilePath = FilePath;
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SignIn_LoadsSubscriptions_AndSetsAccount()
     {
         await _sut.SignInCommand.ExecuteAsync(null);
 
-        Assert.True(_sut.IsSignedIn);
-        Assert.Equal("me@contoso.com", _sut.AccountName);
-        Assert.Equal([Sub1, Sub2], _sut.Subscriptions);
+        Assert.IsTrue(_sut.IsSignedIn);
+        Assert.AreEqual("me@contoso.com", _sut.AccountName);
+        Assert.AreSequenceEqual([Sub1, Sub2], _sut.Subscriptions);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SignIn_Failure_ShowsError_AndStaysSignedOut()
     {
         _auth.SignInAsync(Arg.Any<CancellationToken>()).ThrowsAsync(new InvalidOperationException("nope"));
 
         await _sut.SignInCommand.ExecuteAsync(null);
 
-        Assert.False(_sut.IsSignedIn);
-        Assert.Equal(StatusSeverity.Error, _sut.StatusSeverity);
-        Assert.Contains("nope", _sut.StatusMessage);
+        Assert.IsFalse(_sut.IsSignedIn);
+        Assert.AreEqual(StatusSeverity.Error, _sut.StatusSeverity);
+        Assert.Contains("nope", _sut.StatusMessage!);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Initialize_RestoresSessionSilently()
     {
         _auth.TrySignInSilentlyAsync(Arg.Any<CancellationToken>()).Returns(true);
 
         await _sut.InitializeAsync();
 
-        Assert.True(_sut.IsSignedIn);
-        Assert.Equal(2, _sut.Subscriptions.Count);
+        Assert.IsTrue(_sut.IsSignedIn);
+        Assert.AreEqual(2, _sut.Subscriptions.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Initialize_WithoutSession_StaysSignedOut()
     {
         _auth.TrySignInSilentlyAsync(Arg.Any<CancellationToken>()).Returns(false);
 
         await _sut.InitializeAsync();
 
-        Assert.False(_sut.IsSignedIn);
+        Assert.IsFalse(_sut.IsSignedIn);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SingleSubscription_IsPreselected()
     {
         _azure.GetSubscriptionsAsync(Arg.Any<CancellationToken>()).Returns([Sub1]);
@@ -124,43 +125,43 @@ public sealed class MainViewModelTests : IDisposable
         await _sut.SignInCommand.ExecuteAsync(null);
         await WaitForAppServicesAsync();
 
-        Assert.Equal(Sub1, _sut.SelectedSubscription);
-        Assert.Equal(2, _sut.AppServices.Count);
+        Assert.AreEqual(Sub1, _sut.SelectedSubscription);
+        Assert.AreEqual(2, _sut.AppServices.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SelectingFunctionApp_SuggestsFunctionsFormat()
     {
         await SignInAndSelectAsync(Func);
-        Assert.True(_sut.IsFunctionsFormat);
+        Assert.IsTrue(_sut.IsFunctionsFormat);
 
         _sut.SelectedAppService = Web;
-        Assert.False(_sut.IsFunctionsFormat);
+        Assert.IsFalse(_sut.IsFunctionsFormat);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SignOut_ClearsEverything()
     {
         await SignInAndSelectAsync(Web);
 
         _sut.SignOutCommand.Execute(null);
 
-        Assert.False(_sut.IsSignedIn);
-        Assert.Empty(_sut.Subscriptions);
-        Assert.Empty(_sut.AppServices);
-        Assert.Null(_sut.SelectedAppService);
+        Assert.IsFalse(_sut.IsSignedIn);
+        Assert.IsEmpty(_sut.Subscriptions);
+        Assert.IsEmpty(_sut.AppServices);
+        Assert.IsNull(_sut.SelectedAppService);
         _auth.Received(1).SignOut();
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_JsonTarget_ProducesPreview_WithoutReadingFiles()
     {
         await SignInAndSelectAsync(Func);
 
         await _sut.GenerateCommand.ExecuteAsync(null);
 
-        Assert.Equal("{\"generated\":true}", _sut.Preview);
-        Assert.Contains("2 added", _sut.Summary);
+        Assert.AreEqual("{\"generated\":true}", _sut.Preview);
+        Assert.Contains("2 added", _sut.Summary!);
         _generator.Received(1).Generate(
             _config,
             Arg.Is<GenerationOptions>(o => o.Format == ConfigFormat.FunctionLocalSettings && o.ExcludePlatformSettings),
@@ -168,7 +169,7 @@ public sealed class MainViewModelTests : IDisposable
         _files.DidNotReceiveWithAnyArgs().Exists(default!);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_ResolvesKeyVault_AndPassesResolvedConfigToGenerator()
     {
         var resolved = new AzureAppConfiguration(
@@ -181,10 +182,10 @@ public sealed class MainViewModelTests : IDisposable
 
         _generator.Received(1).Generate(resolved, Arg.Any<GenerationOptions>(), Arg.Any<string?>());
         Assert.Contains("Could not read X", _sut.Warnings);
-        Assert.Equal(StatusSeverity.Warning, _sut.StatusSeverity);
+        Assert.AreEqual(StatusSeverity.Warning, _sut.StatusSeverity);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_WithKeyVaultResolutionOff_SkipsResolver_AndWarnsAboutReferences()
     {
         _azure.GetConfigurationAsync(Arg.Any<AppServiceInfo>(), Arg.Any<CancellationToken>()).Returns(
@@ -197,22 +198,22 @@ public sealed class MainViewModelTests : IDisposable
         await _sut.GenerateCommand.ExecuteAsync(null);
 
         await _resolver.DidNotReceiveWithAnyArgs().ResolveAsync(default!, default);
-        Assert.Contains(_sut.Warnings, w => w.Contains("Key Vault", StringComparison.Ordinal));
+        Assert.Contains(w => w.Contains("Key Vault", StringComparison.Ordinal), _sut.Warnings);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_FileTarget_RequiresFile()
     {
         await SignInAndSelectAsync(Web);
         _sut.IsFileTarget = true;
 
-        Assert.False(_sut.GenerateCommand.CanExecute(null));
+        Assert.IsFalse(_sut.GenerateCommand.CanExecute(null));
 
         _sut.SelectedFilePath = FilePath;
-        Assert.True(_sut.GenerateCommand.CanExecute(null));
+        Assert.IsTrue(_sut.GenerateCommand.CanExecute(null));
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_FileTarget_MergesIntoFileContent()
     {
         await SelectFileTargetAsync("{\"local\":1}");
@@ -220,10 +221,10 @@ public sealed class MainViewModelTests : IDisposable
         await _sut.GenerateCommand.ExecuteAsync(null);
 
         _generator.Received(1).Generate(_config, Arg.Any<GenerationOptions>(), "{\"local\":1}");
-        Assert.True(_sut.SaveToFileCommand.CanExecute(null));
+        Assert.IsTrue(_sut.SaveToFileCommand.CanExecute(null));
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_MissingFile_ShowsError()
     {
         _files.Exists(Arg.Any<string>()).Returns(false);
@@ -233,11 +234,11 @@ public sealed class MainViewModelTests : IDisposable
 
         await _sut.GenerateCommand.ExecuteAsync(null);
 
-        Assert.Equal(StatusSeverity.Error, _sut.StatusSeverity);
-        Assert.Empty(_sut.Preview);
+        Assert.AreEqual(StatusSeverity.Error, _sut.StatusSeverity);
+        Assert.IsEmpty(_sut.Preview);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_GeneratorFailure_ShowsError()
     {
         _generator.Generate(Arg.Any<AzureAppConfiguration>(), Arg.Any<GenerationOptions>(), Arg.Any<string?>())
@@ -246,11 +247,11 @@ public sealed class MainViewModelTests : IDisposable
 
         await _sut.GenerateCommand.ExecuteAsync(null);
 
-        Assert.Equal(StatusSeverity.Error, _sut.StatusSeverity);
-        Assert.Contains("bad file", _sut.StatusMessage);
+        Assert.AreEqual(StatusSeverity.Error, _sut.StatusSeverity);
+        Assert.Contains("bad file", _sut.StatusMessage!);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Save_WritesPreview_WithBackup()
     {
         await SelectFileTargetAsync("{}");
@@ -260,10 +261,10 @@ public sealed class MainViewModelTests : IDisposable
 
         _files.Received(1).Copy(FilePath, FilePath + ".bak", true);
         await _files.Received(1).WriteAllTextAsync(FilePath, "{\"generated\":true}", Arg.Any<CancellationToken>());
-        Assert.Equal(StatusSeverity.Success, _sut.StatusSeverity);
+        Assert.AreEqual(StatusSeverity.Success, _sut.StatusSeverity);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Save_WithoutBackupOption_DoesNotCopy()
     {
         await SelectFileTargetAsync("{}");
@@ -275,7 +276,7 @@ public sealed class MainViewModelTests : IDisposable
         _files.DidNotReceiveWithAnyArgs().Copy(default!, default!, default);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Save_RefusesWhenFileChangedSincePreview()
     {
         await SelectFileTargetAsync("{}");
@@ -285,14 +286,14 @@ public sealed class MainViewModelTests : IDisposable
         await _sut.SaveToFileCommand.ExecuteAsync(null);
 
         await _files.DidNotReceiveWithAnyArgs().WriteAllTextAsync(default!, default!, default);
-        Assert.Equal(StatusSeverity.Error, _sut.StatusSeverity);
+        Assert.AreEqual(StatusSeverity.Error, _sut.StatusSeverity);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Copy_PutsPreviewOnClipboard()
     {
         await SignInAndSelectAsync(Web);
-        Assert.False(_sut.CopyToClipboardCommand.CanExecute(null));
+        Assert.IsFalse(_sut.CopyToClipboardCommand.CanExecute(null));
         await _sut.GenerateCommand.ExecuteAsync(null);
 
         _sut.CopyToClipboardCommand.Execute(null);
@@ -300,22 +301,22 @@ public sealed class MainViewModelTests : IDisposable
         _clipboard.Received(1).SetText("{\"generated\":true}");
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ChangingOptions_InvalidatesPreview()
     {
         await SignInAndSelectAsync(Web);
         await _sut.GenerateCommand.ExecuteAsync(null);
-        Assert.NotEmpty(_sut.Preview);
+        Assert.IsNotEmpty(_sut.Preview);
 
         _sut.IsFunctionsFormat = !_sut.IsFunctionsFormat;
 
-        Assert.Empty(_sut.Preview);
-        Assert.False(_sut.CopyToClipboardCommand.CanExecute(null));
+        Assert.IsEmpty(_sut.Preview);
+        Assert.IsFalse(_sut.CopyToClipboardCommand.CanExecute(null));
     }
 
-    [Theory]
-    [InlineData(@"C:\p\local.settings.json", true)]
-    [InlineData(@"C:\p\appsettings.Development.json", false)]
+    [TestMethod]
+    [DataRow(@"C:\p\local.settings.json", true)]
+    [DataRow(@"C:\p\appsettings.Development.json", false)]
     public async Task Browse_PicksFormatFromFileName(string path, bool expectedFunctions)
     {
         _picker.PickSettingsFileAsync().Returns(path);
@@ -323,11 +324,11 @@ public sealed class MainViewModelTests : IDisposable
 
         await _sut.BrowseFileCommand.ExecuteAsync(null);
 
-        Assert.Equal(path, _sut.SelectedFilePath);
-        Assert.Equal(expectedFunctions, _sut.IsFunctionsFormat);
+        Assert.AreEqual(path, _sut.SelectedFilePath);
+        Assert.AreEqual(expectedFunctions, _sut.IsFunctionsFormat);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Browse_Cancelled_KeepsPath()
     {
         _picker.PickSettingsFileAsync().Returns((string?)null);
@@ -335,58 +336,58 @@ public sealed class MainViewModelTests : IDisposable
 
         await _sut.BrowseFileCommand.ExecuteAsync(null);
 
-        Assert.Equal("keep", _sut.SelectedFilePath);
+        Assert.AreEqual("keep", _sut.SelectedFilePath);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SelectingAppService_EnablesGenerate_AndRaisesCanExecuteChanged()
     {
         await _sut.SignInCommand.ExecuteAsync(null);
         _sut.SelectedSubscription = Sub1;
         await WaitForAppServicesAsync();
-        Assert.False(_sut.GenerateCommand.CanExecute(null));
+        Assert.IsFalse(_sut.GenerateCommand.CanExecute(null));
         var raised = 0;
         _sut.GenerateCommand.CanExecuteChanged += (_, _) => raised++;
 
         _sut.SelectedAppService = Web;
 
-        Assert.True(raised > 0);
-        Assert.True(_sut.GenerateCommand.CanExecute(null));
+        Assert.IsTrue(raised > 0);
+        Assert.IsTrue(_sut.GenerateCommand.CanExecute(null));
     }
 
-    [Fact]
+    [TestMethod]
     public void FormatSelection_IsInverseOfFunctionsFormat()
     {
-        Assert.True(_sut.IsAppSettingsFormat);
+        Assert.IsTrue(_sut.IsAppSettingsFormat);
         _sut.IsFunctionsFormat = true;
-        Assert.False(_sut.IsAppSettingsFormat);
+        Assert.IsFalse(_sut.IsAppSettingsFormat);
         _sut.IsAppSettingsFormat = true;
-        Assert.False(_sut.IsFunctionsFormat);
+        Assert.IsFalse(_sut.IsFunctionsFormat);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SignIn_LoadsTenants_AndSelectsCurrentOne_WithoutSwitching()
     {
         await _sut.SignInCommand.ExecuteAsync(null);
 
-        Assert.Equal([TenantA, TenantB], _sut.Tenants);
-        Assert.Equal(TenantA, _sut.SelectedTenant);
+        Assert.AreSequenceEqual([TenantA, TenantB], _sut.Tenants);
+        Assert.AreEqual(TenantA, _sut.SelectedTenant);
         await _auth.DidNotReceiveWithAnyArgs().SwitchTenantAsync(default!, default);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SignIn_TenantListFailure_IsNotFatal()
     {
         _azure.GetTenantsAsync(Arg.Any<CancellationToken>()).ThrowsAsync(new InvalidOperationException("no tenants"));
 
         await _sut.SignInCommand.ExecuteAsync(null);
 
-        Assert.True(_sut.IsSignedIn);
-        Assert.Empty(_sut.Tenants);
-        Assert.Equal(2, _sut.Subscriptions.Count);
+        Assert.IsTrue(_sut.IsSignedIn);
+        Assert.IsEmpty(_sut.Tenants);
+        Assert.AreEqual(2, _sut.Subscriptions.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task SelectingOtherTenant_SwitchesAndReloadsSubscriptions()
     {
         await SignInAndSelectAsync(Web);
@@ -399,12 +400,12 @@ public sealed class MainViewModelTests : IDisposable
         await WaitUntilAsync(() => !_sut.IsBusy && _sut.Subscriptions.Contains(tenantBSubs));
 
         await _auth.Received(1).SwitchTenantAsync(TenantB.Id, Arg.Any<CancellationToken>());
-        Assert.Equal([tenantBSubs], _sut.Subscriptions);
-        Assert.Equal(TenantB, _sut.SelectedTenant);
-        Assert.Null(_sut.SelectedAppService);
+        Assert.AreSequenceEqual([tenantBSubs], _sut.Subscriptions);
+        Assert.AreEqual(TenantB, _sut.SelectedTenant);
+        Assert.IsNull(_sut.SelectedAppService);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task FailedTenantSwitch_ShowsError_AndRevertsSelection()
     {
         await _sut.SignInCommand.ExecuteAsync(null);
@@ -414,9 +415,9 @@ public sealed class MainViewModelTests : IDisposable
         _sut.SelectedTenant = TenantB;
         await WaitUntilAsync(() => !_sut.IsBusy && _sut.StatusSeverity == StatusSeverity.Error);
 
-        Assert.Equal(TenantA, _sut.SelectedTenant);
-        Assert.Contains("login cancelled", _sut.StatusMessage);
-        Assert.Equal(2, _sut.Subscriptions.Count);
+        Assert.AreEqual(TenantA, _sut.SelectedTenant);
+        Assert.Contains("login cancelled", _sut.StatusMessage!);
+        Assert.AreEqual(2, _sut.Subscriptions.Count);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition)
@@ -427,52 +428,52 @@ public sealed class MainViewModelTests : IDisposable
         }
     }
 
-    [Theory]
-    [InlineData("jane.doe@contoso.com", "JA")]
-    [InlineData("x@y.z", "X")]
-    [InlineData("42@y.z", "?")]
-    [InlineData(null, "?")]
+    [TestMethod]
+    [DataRow("jane.doe@contoso.com", "JA")]
+    [DataRow("x@y.z", "X")]
+    [DataRow("42@y.z", "?")]
+    [DataRow(null, "?")]
     public void AccountInitials_AreDerivedFromUserName(string? account, string expected)
     {
         _sut.AccountName = account;
 
-        Assert.Equal(expected, _sut.AccountInitials);
+        Assert.AreEqual(expected, _sut.AccountInitials);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task PreviewTitle_FollowsFormatAndFile()
     {
-        Assert.Equal("appsettings.json", _sut.PreviewTitle);
+        Assert.AreEqual("appsettings.json", _sut.PreviewTitle);
 
         _sut.IsFunctionsFormat = true;
-        Assert.Equal("local.settings.json", _sut.PreviewTitle);
+        Assert.AreEqual("local.settings.json", _sut.PreviewTitle);
 
         _sut.IsFileTarget = true;
         _sut.SelectedFilePath = @"C:\p\appsettings.Development.json";
-        Assert.Equal("appsettings.Development.json", _sut.PreviewTitle);
+        Assert.AreEqual("appsettings.Development.json", _sut.PreviewTitle);
 
         await Task.CompletedTask;
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_PublishesCountsAndPreviewFlags()
     {
         await SignInAndSelectAsync(Web);
-        Assert.True(_sut.IsPreviewEmpty);
+        Assert.IsTrue(_sut.IsPreviewEmpty);
 
         await _sut.GenerateCommand.ExecuteAsync(null);
 
-        Assert.True(_sut.HasPreviewText);
-        Assert.False(_sut.IsPreviewEmpty);
-        Assert.Equal((2, 1, 0), (_sut.AddedCount, _sut.OverriddenCount, _sut.UnchangedCount));
+        Assert.IsTrue(_sut.HasPreviewText);
+        Assert.IsFalse(_sut.IsPreviewEmpty);
+        Assert.AreEqual((2, 1, 0), (_sut.AddedCount, _sut.OverriddenCount, _sut.UnchangedCount));
 
         _sut.IsFunctionsFormat = true; // invalidates the result
 
-        Assert.True(_sut.IsPreviewEmpty);
-        Assert.Equal((0, 0, 0), (_sut.AddedCount, _sut.OverriddenCount, _sut.UnchangedCount));
+        Assert.IsTrue(_sut.IsPreviewEmpty);
+        Assert.AreEqual((0, 0, 0), (_sut.AddedCount, _sut.OverriddenCount, _sut.UnchangedCount));
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Generate_WithWarnings_MentionsThemInStatus()
     {
         _resolver.ResolveAsync(Arg.Any<AzureAppConfiguration>(), Arg.Any<CancellationToken>())
@@ -481,16 +482,16 @@ public sealed class MainViewModelTests : IDisposable
 
         await _sut.GenerateCommand.ExecuteAsync(null);
 
-        Assert.Contains("2 warning(s)", _sut.StatusMessage);
+        Assert.Contains("2 warning(s)", _sut.StatusMessage!);
     }
 
-    [Fact]
+    [TestMethod]
     public void JsonTarget_IsInverseOfFileTarget()
     {
-        Assert.True(_sut.IsJsonTarget);
+        Assert.IsTrue(_sut.IsJsonTarget);
         _sut.IsFileTarget = true;
-        Assert.False(_sut.IsJsonTarget);
+        Assert.IsFalse(_sut.IsJsonTarget);
         _sut.IsJsonTarget = true;
-        Assert.False(_sut.IsFileTarget);
+        Assert.IsFalse(_sut.IsFileTarget);
     }
 }

@@ -7,7 +7,7 @@ using WinRT.Interop;
 namespace ConfigFerry.App.Services;
 
 /// <summary>Gives services access to the main window handle (needed to parent pickers in unpackaged apps).</summary>
-public sealed class WindowProvider
+public sealed class WindowProvider : IWindowHandleProvider
 {
     public Window? Window { get; set; }
 
@@ -15,7 +15,7 @@ public sealed class WindowProvider
         WindowNative.GetWindowHandle(Window ?? throw new InvalidOperationException("The main window is not created yet."));
 }
 
-public sealed class FilePickerService(WindowProvider windowProvider) : IFilePickerService
+public sealed class FilePickerService(IWindowHandleProvider windowProvider) : IFilePickerService
 {
     public async Task<string?> PickSettingsFileAsync()
     {

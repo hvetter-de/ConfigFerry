@@ -83,7 +83,7 @@ Versions with a suffix (e.g. `1.1.0-beta.1`) are marked as pre-releases.
 |---|---|
 | `ConfigFerry.Core` | UI-free logic: `.Models`, `.Configuration` (tree builder, merger, generator), `.Azure` (auth, ARM, Key Vault), `.Abstractions`, `.ViewModels` |
 | `ConfigFerry.App` | WinUI 3 shell (unpackaged, self-contained): views, file picker / clipboard services, DI composition root |
-| `ConfigFerry.Core.Tests` | xUnit + NSubstitute tests for the merge engine, Key Vault resolution and the view model |
+| `ConfigFerry.Core.Tests` | MSTest + NSubstitute tests: merge engine, Key Vault resolution, auth session logic, ARM mapping, view model and DI wiring |
 
 Known limit: deployment slots are not listed.
 

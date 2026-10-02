@@ -1,8 +1,6 @@
 using ConfigFerry.App.Services;
+using ConfigFerry.Core;
 using ConfigFerry.Core.Abstractions;
-using ConfigFerry.Core.Azure;
-using ConfigFerry.Core.Configuration;
-using ConfigFerry.Core.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
@@ -36,19 +34,13 @@ public partial class App : Application
 
     private static void ConfigureServices(IServiceCollection services)
     {
-        // Core
-        services.AddSingleton<IAzureAuthService, AzureAuthService>();
-        services.AddSingleton<IAzureResourceService, AzureResourceService>();
-        services.AddSingleton<ISecretReader, KeyVaultSecretReader>();
-        services.AddSingleton<IKeyVaultReferenceResolver, KeyVaultReferenceResolver>();
-        services.AddSingleton<IConfigGenerator, ConfigGenerator>();
-        services.AddSingleton<ITextFileStore, TextFileStore>();
+        // Everything UI-independent (Azure access, merge logic, view model), always consumed via interfaces
+        services.AddConfigFerryCore();
 
-        // Platform (WinUI)
+        // Platform services that need WinUI
         services.AddSingleton<WindowProvider>();
+        services.AddSingleton<IWindowHandleProvider>(sp => sp.GetRequiredService<WindowProvider>());
         services.AddSingleton<IFilePickerService, FilePickerService>();
         services.AddSingleton<IClipboardService, ClipboardService>();
-
-        services.AddSingleton<MainViewModel>();
     }
 }

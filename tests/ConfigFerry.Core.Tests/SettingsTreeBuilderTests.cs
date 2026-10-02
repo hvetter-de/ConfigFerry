@@ -3,12 +3,13 @@ using ConfigFerry.Core.Configuration;
 
 namespace ConfigFerry.Core.Tests;
 
+[TestClass]
 public class SettingsTreeBuilderTests
 {
     private static JsonObject Build(IDictionary<string, string> settings, List<string>? warnings = null) =>
         SettingsTreeBuilder.Build(settings, warnings ?? []);
 
-    [Fact]
+    [TestMethod]
     public void Builds_NestedObjects_FromBothSeparators()
     {
         var tree = Build(new Dictionary<string, string>
@@ -18,12 +19,12 @@ public class SettingsTreeBuilderTests
             ["Name"] = "app",
         });
 
-        Assert.Equal("Warning", (string?)tree["Logging"]!["LogLevel"]!["Default"]);
-        Assert.Equal("Error", (string?)tree["Logging"]!["LogLevel"]!["System"]);
-        Assert.Equal("app", (string?)tree["Name"]);
+        Assert.AreEqual("Warning", (string?)tree["Logging"]!["LogLevel"]!["Default"]);
+        Assert.AreEqual("Error", (string?)tree["Logging"]!["LogLevel"]!["System"]);
+        Assert.AreEqual("app", (string?)tree["Name"]);
     }
 
-    [Fact]
+    [TestMethod]
     public void Builds_Arrays_FromConsecutiveIndexes()
     {
         var tree = Build(new Dictionary<string, string>
@@ -33,19 +34,19 @@ public class SettingsTreeBuilderTests
             ["Hosts__2"] = "c",
         });
 
-        var array = Assert.IsType<JsonArray>(tree["Hosts"]);
-        Assert.Equal(["a", "b", "c"], array.Select(n => (string?)n));
+        var array = Assert.IsInstanceOfType<JsonArray>(tree["Hosts"]);
+        Assert.AreSequenceEqual(["a", "b", "c"], array.Select(n => (string?)n));
     }
 
-    [Fact]
+    [TestMethod]
     public void NonConsecutiveIndexes_StayAnObject()
     {
         var tree = Build(new Dictionary<string, string> { ["X__0"] = "a", ["X__2"] = "c" });
 
-        Assert.IsType<JsonObject>(tree["X"]);
+        Assert.IsInstanceOfType<JsonObject>(tree["X"]);
     }
 
-    [Fact]
+    [TestMethod]
     public void Arrays_OfObjects_AreSupported()
     {
         var tree = Build(new Dictionary<string, string>
@@ -54,26 +55,26 @@ public class SettingsTreeBuilderTests
             ["Endpoints__1__Url"] = "u1",
         });
 
-        var array = Assert.IsType<JsonArray>(tree["Endpoints"]);
-        Assert.Equal("u1", (string?)array[1]!["Url"]);
+        var array = Assert.IsInstanceOfType<JsonArray>(tree["Endpoints"]);
+        Assert.AreEqual("u1", (string?)array[1]!["Url"]);
     }
 
-    [Fact]
+    [TestMethod]
     public void SameKeyDifferentCasing_IsOneNode()
     {
         var tree = Build(new Dictionary<string, string> { ["A__b"] = "1", ["a__C"] = "2" });
 
-        Assert.Single(tree);
-        Assert.Equal(2, ((JsonObject)tree.First().Value!).Count);
+        Assert.ContainsSingle(tree);
+        Assert.AreEqual(2, ((JsonObject)tree.First().Value!).Count);
     }
 
-    [Fact]
+    [TestMethod]
     public void ValueAndSectionConflict_SectionWins_WithWarning()
     {
         var warnings = new List<string>();
         var tree = Build(new Dictionary<string, string> { ["A"] = "x", ["A__B"] = "y" }, warnings);
 
-        Assert.Equal("y", (string?)tree["A"]!["B"]);
-        Assert.Single(warnings);
+        Assert.AreEqual("y", (string?)tree["A"]!["B"]);
+        Assert.ContainsSingle(warnings);
     }
 }

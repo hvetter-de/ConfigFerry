@@ -30,6 +30,45 @@ public interface IAzureAuthService
     global::Azure.Core.TokenCredential GetCredential();
 }
 
+/// <summary>An authenticated Entra session: the credential plus who it belongs to.</summary>
+public sealed record AuthSession(global::Azure.Core.TokenCredential Credential, string Username, string TenantId);
+
+/// <summary>
+/// Creates and restores Entra sessions (browser sign-in, persisted token cache). Isolates everything that needs a
+/// browser or the file system so <see cref="IAzureAuthService"/> stays pure logic.
+/// </summary>
+public interface IAuthSessionFactory
+{
+    /// <summary>Restores a persisted session silently; null when an interactive sign-in is required.</summary>
+    /// <param name="slot">Name of the persisted session (one per tenant).</param>
+    /// <param name="tenantId">Tenant to scope the credential to; null for the account's home tenant.</param>
+    Task<AuthSession?> TryRestoreAsync(string slot, string? tenantId, CancellationToken cancellationToken);
+
+    /// <summary>Interactive sign-in; persists the session under <paramref name="slot"/>.</summary>
+    Task<AuthSession> SignInAsync(string slot, string? tenantId, CancellationToken cancellationToken);
+
+    /// <summary>Forgets every persisted session.</summary>
+    void ForgetAll();
+}
+
+/// <summary>Creates the ARM client for the currently signed-in user (a seam for substituting the SDK in tests).</summary>
+public interface IArmClientFactory
+{
+    global::Azure.ResourceManager.ArmClient Create();
+}
+
+/// <summary>Creates Key Vault secret clients for the currently signed-in user.</summary>
+public interface ISecretClientFactory
+{
+    global::Azure.Security.KeyVault.Secrets.SecretClient Create(Uri vaultUri);
+}
+
+/// <summary>Gives platform services the handle of the main window (pickers need it in unpackaged apps).</summary>
+public interface IWindowHandleProvider
+{
+    nint Handle { get; }
+}
+
 public interface IAzureResourceService
 {
     /// <summary>Tenants the signed-in account is a member or guest of.</summary>

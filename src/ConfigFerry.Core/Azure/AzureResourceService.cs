@@ -1,27 +1,23 @@
 using ConfigFerry.Core.Abstractions;
 using ConfigFerry.Core.Models;
 using global::Azure.Core;
-using global::Azure.ResourceManager;
 using global::Azure.ResourceManager.AppService;
 using global::Azure.ResourceManager.Resources;
 
 namespace ConfigFerry.Core.Azure;
 
-public sealed class AzureResourceService(IAzureAuthService auth) : IAzureResourceService
+public sealed class AzureResourceService(IArmClientFactory armClients) : IAzureResourceService
 {
     public async Task<IReadOnlyList<TenantInfo>> GetTenantsAsync(CancellationToken cancellationToken)
     {
         var result = new List<TenantInfo>();
-        await foreach (var tenant in CreateClient().GetTenants().GetAllAsync(cancellationToken))
+        await foreach (var tenant in armClients.Create().GetTenants().GetAllAsync(cancellationToken))
         {
-            if (tenant.Data.TenantId is not { } id)
+            var info = ArmMapping.ToTenant(tenant.Data.TenantId, tenant.Data.DisplayName, tenant.Data.DefaultDomain);
+            if (info is not null)
             {
-                continue;
+                result.Add(info);
             }
-
-            var name = tenant.Data.DisplayName ?? tenant.Data.DefaultDomain ?? id.ToString();
-            var label = tenant.Data.DefaultDomain is { } domain && domain != name ? $"{name} ({domain})" : name;
-            result.Add(new TenantInfo(id.ToString(), label));
         }
 
         return [.. result.OrderBy(t => t.DisplayName, StringComparer.CurrentCultureIgnoreCase)];
@@ -30,7 +26,7 @@ public sealed class AzureResourceService(IAzureAuthService auth) : IAzureResourc
     public async Task<IReadOnlyList<SubscriptionInfo>> GetSubscriptionsAsync(CancellationToken cancellationToken)
     {
         var result = new List<SubscriptionInfo>();
-        await foreach (var subscription in CreateClient().GetSubscriptions().GetAllAsync(cancellationToken))
+        await foreach (var subscription in armClients.Create().GetSubscriptions().GetAllAsync(cancellationToken))
         {
             result.Add(new SubscriptionInfo(subscription.Data.SubscriptionId, subscription.Data.DisplayName));
         }
@@ -41,16 +37,14 @@ public sealed class AzureResourceService(IAzureAuthService auth) : IAzureResourc
     public async Task<IReadOnlyList<AppServiceInfo>> GetAppServicesAsync(
         string subscriptionId, CancellationToken cancellationToken)
     {
-        var client = CreateClient();
+        var client = armClients.Create();
         var subscription = client.GetSubscriptionResource(SubscriptionResource.CreateResourceIdentifier(subscriptionId));
 
         var result = new List<AppServiceInfo>();
         await foreach (var site in subscription.GetWebSitesAsync(cancellationToken))
         {
-            var kind = site.Data.Kind?.Contains("functionapp", StringComparison.OrdinalIgnoreCase) == true
-                ? AppServiceKind.FunctionApp
-                : AppServiceKind.WebApp;
-            result.Add(new AppServiceInfo(site.Id.ToString(), site.Data.Name, site.Id.ResourceGroupName ?? string.Empty, kind));
+            result.Add(new AppServiceInfo(
+                site.Id.ToString(), site.Data.Name, site.Id.ResourceGroupName ?? string.Empty, ArmMapping.GetKind(site.Data.Kind)));
         }
 
         return [.. result.OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase)];
@@ -59,18 +53,13 @@ public sealed class AzureResourceService(IAzureAuthService auth) : IAzureResourc
     public async Task<AzureAppConfiguration> GetConfigurationAsync(
         AppServiceInfo appService, CancellationToken cancellationToken)
     {
-        var site = CreateClient().GetWebSiteResource(new ResourceIdentifier(appService.ResourceId));
+        var site = armClients.Create().GetWebSiteResource(new ResourceIdentifier(appService.ResourceId));
 
         var settings = await site.GetApplicationSettingsAsync(cancellationToken);
         var connectionStrings = await site.GetConnectionStringsAsync(cancellationToken);
 
         return new AzureAppConfiguration(
-            new Dictionary<string, string>(settings.Value.Properties, StringComparer.OrdinalIgnoreCase),
-            connectionStrings.Value.Properties
-                .Where(p => p.Value?.Value is not null)
-                .ToDictionary(p => p.Key, p => p.Value.Value, StringComparer.OrdinalIgnoreCase));
+            ArmMapping.ToValueMap(settings.Value.Properties.Select(p => KeyValuePair.Create(p.Key, (string?)p.Value))),
+            ArmMapping.ToValueMap(connectionStrings.Value.Properties.Select(p => KeyValuePair.Create(p.Key, p.Value?.Value))));
     }
-
-    private ArmClient CreateClient() => new(auth.GetCredential());
 }
-

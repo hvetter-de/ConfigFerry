@@ -6,62 +6,64 @@ using NSubstitute.ExceptionExtensions;
 
 namespace ConfigFerry.Core.Tests;
 
+[TestClass]
 public class KeyVaultReferenceTests
 {
-    [Fact]
+    [TestMethod]
     public void Parses_SecretUri_WithVersion()
     {
-        Assert.True(KeyVaultReference.TryParse(
+        Assert.IsTrue(KeyVaultReference.TryParse(
             "@Microsoft.KeyVault(SecretUri=https://myvault.vault.azure.net/secrets/db-pass/abc123)", out var r));
-        Assert.Equal(new Uri("https://myvault.vault.azure.net/"), r!.VaultUri);
-        Assert.Equal("db-pass", r.SecretName);
-        Assert.Equal("abc123", r.Version);
+        Assert.AreEqual(new Uri("https://myvault.vault.azure.net/"), r!.VaultUri);
+        Assert.AreEqual("db-pass", r.SecretName);
+        Assert.AreEqual("abc123", r.Version);
     }
 
-    [Fact]
+    [TestMethod]
     public void Parses_SecretUri_WithoutVersion()
     {
-        Assert.True(KeyVaultReference.TryParse(
+        Assert.IsTrue(KeyVaultReference.TryParse(
             "@Microsoft.KeyVault(SecretUri=https://myvault.vault.azure.net/secrets/db-pass)", out var r));
-        Assert.Null(r!.Version);
+        Assert.IsNull(r!.Version);
     }
 
-    [Fact]
+    [TestMethod]
     public void Parses_VaultNameForm_CaseInsensitive()
     {
-        Assert.True(KeyVaultReference.TryParse(
+        Assert.IsTrue(KeyVaultReference.TryParse(
             "  @microsoft.keyvault(vaultname=myvault; SecretName=s1; SecretVersion=v1)  ", out var r));
-        Assert.Equal(new Uri("https://myvault.vault.azure.net/"), r!.VaultUri);
-        Assert.Equal("s1", r.SecretName);
-        Assert.Equal("v1", r.Version);
+        Assert.AreEqual(new Uri("https://myvault.vault.azure.net/"), r!.VaultUri);
+        Assert.AreEqual("s1", r.SecretName);
+        Assert.AreEqual("v1", r.Version);
     }
 
-    [Fact]
+    [TestMethod]
     public void Parses_SovereignCloudSecretUri()
     {
-        Assert.True(KeyVaultReference.TryParse(
+        Assert.IsTrue(KeyVaultReference.TryParse(
             "@Microsoft.KeyVault(SecretUri=https://v.vault.azure.cn/secrets/x/)", out var r));
-        Assert.Equal("v.vault.azure.cn", r!.VaultUri.Host);
+        Assert.AreEqual("v.vault.azure.cn", r!.VaultUri.Host);
     }
 
-    [Theory]
-    [InlineData("plain value")]
-    [InlineData(null)]
-    [InlineData("@Microsoft.KeyVault(SecretUri=http://insecure/secrets/x)")]
-    [InlineData("@Microsoft.KeyVault(SecretUri=https://v.vault.azure.net/keys/x)")]
-    [InlineData("@Microsoft.KeyVault(VaultName=v)")]
-    [InlineData("@Microsoft.KeyVault(garbage)")]
+    [TestMethod]
+    [DataRow("plain value")]
+    [DataRow(null)]
+    [DataRow("@Microsoft.KeyVault(SecretUri=http://insecure/secrets/x)")]
+    [DataRow("@Microsoft.KeyVault(SecretUri=https://v.vault.azure.net/keys/x)")]
+    [DataRow("@Microsoft.KeyVault(VaultName=v)")]
+    [DataRow("@Microsoft.KeyVault(garbage)")]
     public void Rejects_NonOrMalformedReferences(string? value) =>
-        Assert.False(KeyVaultReference.TryParse(value, out _));
+        Assert.IsFalse(KeyVaultReference.TryParse(value, out _));
 
-    [Fact]
+    [TestMethod]
     public void IsReference_TrueForMalformed_FalseForPlain()
     {
-        Assert.True(KeyVaultReference.IsReference("@Microsoft.KeyVault(garbage)"));
-        Assert.False(KeyVaultReference.IsReference("hello"));
+        Assert.IsTrue(KeyVaultReference.IsReference("@Microsoft.KeyVault(garbage)"));
+        Assert.IsFalse(KeyVaultReference.IsReference("hello"));
     }
 }
 
+[TestClass]
 public class KeyVaultReferenceResolverTests
 {
     private const string RefA = "@Microsoft.KeyVault(SecretUri=https://v.vault.azure.net/secrets/a)";
@@ -71,7 +73,7 @@ public class KeyVaultReferenceResolverTests
 
     private KeyVaultReferenceResolver Sut => new(_reader);
 
-    [Fact]
+    [TestMethod]
     public async Task Resolves_SettingsAndConnectionStrings_ReadingEachDistinctSecretOnce()
     {
         _reader.GetSecretAsync(Arg.Any<Uri>(), "a", null, Arg.Any<CancellationToken>()).Returns("secret-a");
@@ -83,16 +85,16 @@ public class KeyVaultReferenceResolverTests
                 new Dictionary<string, string> { ["Db"] = RefB }),
             CancellationToken.None);
 
-        Assert.Equal("secret-a", result.Configuration.AppSettings["One"]);
-        Assert.Equal("secret-a", result.Configuration.AppSettings["Two"]);
-        Assert.Equal("p", result.Configuration.AppSettings["Plain"]);
-        Assert.Equal("secret-b", result.Configuration.ConnectionStrings["Db"]);
-        Assert.Equal(3, result.Resolved);
-        Assert.Empty(result.Warnings);
+        Assert.AreEqual("secret-a", result.Configuration.AppSettings["One"]);
+        Assert.AreEqual("secret-a", result.Configuration.AppSettings["Two"]);
+        Assert.AreEqual("p", result.Configuration.AppSettings["Plain"]);
+        Assert.AreEqual("secret-b", result.Configuration.ConnectionStrings["Db"]);
+        Assert.AreEqual(3, result.Resolved);
+        Assert.IsEmpty(result.Warnings);
         await _reader.Received(1).GetSecretAsync(Arg.Any<Uri>(), "a", null, Arg.Any<CancellationToken>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task FailedSecret_KeepsReference_AndWarns_OthersStillResolve()
     {
         _reader.GetSecretAsync(Arg.Any<Uri>(), "a", null, Arg.Any<CancellationToken>())
@@ -105,14 +107,14 @@ public class KeyVaultReferenceResolverTests
                 new Dictionary<string, string>()),
             CancellationToken.None);
 
-        Assert.Equal(RefA, result.Configuration.AppSettings["One"]);
-        Assert.Equal("secret-b", result.Configuration.AppSettings["Two"]);
-        Assert.Equal(1, result.Resolved);
-        var warning = Assert.Single(result.Warnings);
+        Assert.AreEqual(RefA, result.Configuration.AppSettings["One"]);
+        Assert.AreEqual("secret-b", result.Configuration.AppSettings["Two"]);
+        Assert.AreEqual(1, result.Resolved);
+        var warning = Assert.ContainsSingle(result.Warnings);
         Assert.Contains("access denied", warning, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task MalformedReference_IsKept_WithWarning()
     {
         var result = await Sut.ResolveAsync(
@@ -121,18 +123,18 @@ public class KeyVaultReferenceResolverTests
                 new Dictionary<string, string>()),
             CancellationToken.None);
 
-        Assert.Equal("@Microsoft.KeyVault(garbage)", result.Configuration.AppSettings["Bad"]);
-        Assert.Contains("Bad", Assert.Single(result.Warnings));
+        Assert.AreEqual("@Microsoft.KeyVault(garbage)", result.Configuration.AppSettings["Bad"]);
+        Assert.Contains("Bad", Assert.ContainsSingle(result.Warnings));
         await _reader.DidNotReceiveWithAnyArgs().GetSecretAsync(default!, default!, default, default);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Cancellation_Propagates()
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Sut.ResolveAsync(
+        await Assert.ThrowsAsync<OperationCanceledException>(() => Sut.ResolveAsync(
             new AzureAppConfiguration(
                 new Dictionary<string, string> { ["One"] = RefA },
                 new Dictionary<string, string>()),
